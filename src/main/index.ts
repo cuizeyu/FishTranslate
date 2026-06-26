@@ -1,11 +1,16 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage } from 'electron'
 import { spawn, type ChildProcessWithoutNullStreams } from 'child_process'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import appIcon from '../../resources/icon.png?asset'
 
 const APP_NAME = '鱼语翻译'
 const TRANSLATE_TIMEOUT = 45_000
+
+let mainWindow: BrowserWindow | null = null
+let tray: Tray | null = null
+let isQuitting = false
 
 type PythonResponse = {
   id: number
@@ -187,7 +192,7 @@ class PythonTranslatorService {
 const translatorService = new PythonTranslatorService()
 
 function createWindow(): void {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1100,
     height: 720,
     minWidth: 800,
@@ -203,7 +208,22 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow?.show()
+  })
+
+  // 点击关闭按钮时隐藏到托盘，而不是退出程序
+  mainWindow.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault()
+      mainWindow?.hide()
+      if (process.platform === 'darwin') {
+        app.dock?.hide()
+      }
+    }
+  })
+
+  mainWindow.on('closed', () => {
+    mainWindow = null
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -217,6 +237,64 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+}
+
+function showMainWindow(): void {
+  if (!mainWindow) {
+    createWindow()
+    return
+  }
+
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore()
+  }
+
+  if (process.platform === 'darwin') {
+    app.dock?.show()
+  }
+
+  mainWindow.show()
+  mainWindow.focus()
+}
+
+function getTrayIconImage(): Electron.NativeImage {
+  const image = nativeImage.createFromPath(appIcon)
+
+  if (image.isEmpty()) {
+    return image
+  }
+
+  // 托盘图标使用小尺寸，避免显示过大
+  return image.resize({ width: 16, height: 16 })
+}
+
+function createTray(): void {
+  if (tray) {
+    return
+  }
+
+  tray = new Tray(getTrayIconImage())
+  tray.setToolTip(APP_NAME)
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '打开主界面',
+      click: () => showMainWindow()
+    },
+    { type: 'separator' },
+    {
+      label: '退出程序',
+      click: () => {
+        isQuitting = true
+        app.quit()
+      }
+    }
+  ])
+
+  tray.setContextMenu(contextMenu)
+
+  // 左键单击托盘图标打开窗口
+  tray.on('click', () => showMainWindow())
 }
 
 app.whenReady().then(() => {
@@ -241,19 +319,25 @@ app.whenReady().then(() => {
     return translatorService.translate(query)
   })
 
+  createTray()
   createWindow()
 
   app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    showMainWindow()
   })
 })
 
+// 窗口全部关闭时不退出程序，保持在系统托盘中运行；
+// 仅在通过托盘“退出程序”触发退出时才真正关闭。
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  if (isQuitting) {
     app.quit()
   }
 })
 
 app.on('before-quit', () => {
+  isQuitting = true
   translatorService.dispose()
+  tray?.destroy()
+  tray = null
 })
