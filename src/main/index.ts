@@ -25,13 +25,42 @@ function getRuntimeRoot(): string {
 }
 
 function getPythonCommand(): { command: string; argsPrefix: string[] } {
-  const bundledPython = join(getRuntimeRoot(), '.venv', 'Scripts', 'python.exe')
+  const runtimeRoot = getRuntimeRoot()
+  const candidates = process.platform === 'win32'
+    ? [join(runtimeRoot, '.venv', 'Scripts', 'python.exe'), 'python']
+    : [join(runtimeRoot, '.venv', 'bin', 'python3'), join(runtimeRoot, '.venv', 'bin', 'python'), 'python3', 'python']
 
-  if (existsSync(bundledPython)) {
-    return { command: bundledPython, argsPrefix: [] }
+  for (const candidate of candidates) {
+    if (candidate.includes('/') || candidate.includes('\\')) {
+      if (existsSync(candidate)) {
+        return { command: candidate, argsPrefix: [] }
+      }
+
+      continue
+    }
+
+    return { command: candidate, argsPrefix: [] }
   }
 
   return { command: 'python', argsPrefix: [] }
+}
+
+function getDevWindowIcon(): string | undefined {
+  if (!is.dev) {
+    return undefined
+  }
+
+  const runtimeRoot = getRuntimeRoot()
+
+  if (process.platform === 'darwin') {
+    return join(runtimeRoot, 'build', 'icon.png')
+  }
+
+  if (process.platform === 'win32') {
+    return join(runtimeRoot, 'build', 'icon.ico')
+  }
+
+  return join(runtimeRoot, 'build', 'icon.png')
 }
 
 class PythonTranslatorService {
@@ -166,7 +195,7 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     title: APP_NAME,
-    icon: is.dev ? join(__dirname, '../../build/icon.ico') : undefined,
+    icon: getDevWindowIcon(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -192,6 +221,10 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   app.setName(APP_NAME)
+  if (process.platform === 'darwin' && is.dev) {
+    app.dock?.setIcon(join(getRuntimeRoot(), 'build', 'icon.png'))
+  }
+
   electronApp.setAppUserModelId('com.fishtranslate.app')
 
   app.on('browser-window-created', (_, window) => {

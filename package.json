@@ -14,9 +14,11 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "clean:dist": "node scripts/clean-dist.mjs",
     "build:win": "pnpm clean:dist && electron-vite build && electron-builder --win",
+    "build:mac": "pnpm clean:dist && electron-vite build && electron-builder --mac",
     "build:unpack": "pnpm clean:dist && electron-vite build && electron-builder --dir",
-    "icon:build": ".venv\\Scripts\\python scripts/icon/convert_icon.py",
-    "py:install": ".venv\\Scripts\\python -m pip install -r requirements.txt"
+    "build:mac:unpack": "pnpm clean:dist && electron-vite build && electron-builder --mac --dir",
+    "icon:build": "node scripts/run-python.mjs scripts/icon/convert_icon.py",
+    "py:install": "node scripts/run-python.mjs -m pip install -r requirements.txt"
   },
   "dependencies": {
     "@ant-design/icons": "^6.2.5",
