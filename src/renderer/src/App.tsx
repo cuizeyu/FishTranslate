@@ -183,7 +183,6 @@ function App() {
         </button>
 
         <div className="lang-bar__spacer" />
-        <span className="lang-bar__mode">机翻 · 通用领域</span>
       </header>
 
       {/* 双栏翻译区 */}
