@@ -74,10 +74,10 @@ class PythonTranslatorService {
   private nextId = 1
   private pending = new Map<number, PendingRequest>()
 
-  translate(text: string): Promise<string> {
+  translate(text: string, fromLang: string, toLang: string): Promise<string> {
     const child = this.ensureProcess()
     const id = this.nextId++
-    const payload = JSON.stringify({ id, text }) + '\n'
+    const payload = JSON.stringify({ id, text, from: fromLang, to: toLang }) + '\n'
 
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -309,14 +309,14 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  ipcMain.handle('translate:text', async (_event, text: string) => {
+  ipcMain.handle('translate:text', async (_event, text: string, fromLang: string, toLang: string) => {
     const query = text.trim()
 
     if (!query) {
       return ''
     }
 
-    return translatorService.translate(query)
+    return translatorService.translate(query, fromLang, toLang)
   })
 
   createTray()

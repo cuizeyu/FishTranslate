@@ -3,7 +3,8 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // 自定义暴露给渲染进程的 API
 const api = {
-  translate: (text: string): Promise<string> => ipcRenderer.invoke('translate:text', text)
+  translate: (text: string, fromLang: string, toLang: string): Promise<string> =>
+    ipcRenderer.invoke('translate:text', text, fromLang, toLang)
 }
 
 if (process.contextIsolated) {

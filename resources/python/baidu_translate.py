@@ -124,28 +124,51 @@ class BaiduTranslator:
         self._request("GET", INDEX_URL)
         self._ready = True
 
-    def translate(self, text: str) -> str:
+    def detect_language(self, text: str) -> str:
+        """调用百度语言检测接口，返回语言代码。"""
+        self._warm_up()
+        response = self._request(
+            "POST",
+            "https://fanyi.baidu.com/langdetect",
+            data={"query": text[:200]},
+        )
+        response.raise_for_status()
+        data = response.json()
+        if data.get("error") != 0:
+            raise RuntimeError(data.get("msg") or "语言检测失败")
+        return str(data.get("lan") or "zh")
+
+    def translate(self, text: str, from_lang: str = "zh", to_lang: str = "en") -> str:
         text = text.strip()
         if not text:
             raise ValueError("输入内容不能为空")
+        if not to_lang:
+            raise ValueError("目标语言不能为空")
 
         self._warm_up()
 
+        # 百度新版接口不支持 from=auto，需要先检测语言
+        if from_lang == "auto":
+            from_lang = self.detect_language(text)
+
         start_time = int(time.time() * 1000)
         acs_token = _make_acs_token(self.session, start_time + 3001)
+
+        # from 已经是具体语言（auto 在上面已处理）
+        detect_lang = ""
 
         response = self._request(
             "POST",
             TRANS_URL,
             json={
                 "query": text,
-                "from": "zh",
-                "to": "en",
+                "from": from_lang,
+                "to": to_lang,
                 "reference": "",
                 "corpusIds": [],
                 "needPhonetic": False,
                 "domain": "common",
-                "detectLang": "",
+                "detectLang": detect_lang,
                 "milliTimestamp": start_time + 1,
             },
             headers={
@@ -158,14 +181,14 @@ class BaiduTranslator:
         return _extract_translation(_parse_sse(response.text))
 
 
-def translate_text(text: str) -> str:
+def translate_text(text: str, from_lang: str = "zh", to_lang: str = "en") -> str:
     translator = BaiduTranslator()
-    return translator.translate(text)
+    return translator.translate(text, from_lang, to_lang)
 
 
-def translate_once(text: str) -> int:
+def translate_once(text: str, from_lang: str, to_lang: str) -> int:
     try:
-        print(translate_text(text), flush=True)
+        print(translate_text(text, from_lang, to_lang), flush=True)
         return 0
     except requests.RequestException as exc:
         print(f"网络错误: {exc}", file=sys.stderr, flush=True)
@@ -187,8 +210,10 @@ def serve() -> None:
             payload = json.loads(line)
             request_id = payload.get("id")
             text = str(payload.get("text") or "")
+            from_lang = str(payload.get("from") or "auto")
+            to_lang = str(payload.get("to") or "en")
 
-            result = translator.translate(text)
+            result = translator.translate(text, from_lang, to_lang)
             _write_json_line({"id": request_id, "ok": True, "result": result})
         except requests.RequestException as exc:
             _write_json_line({"id": payload.get("id"), "ok": False, "error": f"网络错误: {exc}"})
@@ -198,8 +223,10 @@ def serve() -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="百度翻译（中文 -> 英文）")
-    parser.add_argument("--text", help="要翻译的中文文本；传入后只执行一次并输出英文结果")
+    parser = argparse.ArgumentParser(description="百度翻译")
+    parser.add_argument("--text", help="要翻译的文本；传入后只执行一次并输出结果")
+    parser.add_argument("--from", dest="from_lang", default="auto", help="源语言代码（默认 auto 自动检测）")
+    parser.add_argument("--to", dest="to_lang", default="en", help="目标语言代码（默认 en 英语）")
     parser.add_argument("--serve", action="store_true", help="以常驻进程模式运行，通过 stdin/stdout 接收 JSON 行")
     args = parser.parse_args()
 
@@ -208,16 +235,15 @@ def main() -> None:
         return
 
     if args.text is not None:
-        raise SystemExit(translate_once(args.text))
+        raise SystemExit(translate_once(args.text, args.from_lang, args.to_lang))
 
-    print("百度翻译（中文 -> 英文）")
-    print("输入中文后回车翻译，直接回车退出\n")
+    print("百度翻译（输入文本后回车翻译，直接回车退出）\n")
 
     translator = BaiduTranslator()
 
     while True:
         try:
-            text = input("请输入中文: ").strip()
+            text = input("请输入文本: ").strip()
         except (EOFError, KeyboardInterrupt):
             print("\n已退出")
             break
@@ -227,8 +253,8 @@ def main() -> None:
             break
 
         try:
-            result = translator.translate(text)
-            print(f"英文: {result}\n")
+            result = translator.translate(text, args.from_lang, args.to_lang)
+            print(f"译文: {result}\n")
         except requests.RequestException as exc:
             print(f"网络错误: {exc}\n")
         except Exception as exc:

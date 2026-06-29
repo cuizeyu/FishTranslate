@@ -1,0 +1,747 @@
+{
+  "source": "baidu-fanyi",
+  "count": 106,
+  "groups": [
+    {
+      "letter": "#",
+      "languages": [
+        {
+          "code": "auto",
+          "name": "自动检测",
+          "enName": "Auto Detect",
+          "ai": false
+        },
+        {
+          "code": "wyw",
+          "name": "文言文",
+          "enName": "Classical Chinese",
+          "ai": false
+        },
+        {
+          "code": "mn",
+          "name": "蒙古语",
+          "enName": "Mongolian",
+          "ai": false
+        },
+        {
+          "code": "si",
+          "name": "僧伽罗语",
+          "enName": "Sinhala",
+          "ai": false
+        },
+        {
+          "code": "no",
+          "name": "挪威语",
+          "enName": "Norwegian",
+          "ai": false
+        },
+        {
+          "code": "sn",
+          "name": "修纳语",
+          "enName": "Shona",
+          "ai": false
+        },
+        {
+          "code": "su",
+          "name": "巽他语",
+          "enName": "Sundanese",
+          "ai": false
+        },
+        {
+          "code": "haw",
+          "name": "夏威夷语",
+          "enName": "Hawaiian",
+          "ai": false
+        }
+      ]
+    },
+    {
+      "letter": "A",
+      "languages": [
+        {
+          "code": "ara",
+          "name": "阿拉伯语",
+          "enName": "Arabic",
+          "ai": true
+        },
+        {
+          "code": "est",
+          "name": "爱沙尼亚语",
+          "enName": "Estonian",
+          "ai": true
+        },
+        {
+          "code": "aze",
+          "name": "阿塞拜疆语",
+          "enName": "Azerbaijani",
+          "ai": false
+        },
+        {
+          "code": "sq",
+          "name": "阿尔巴尼亚语",
+          "enName": "Albanian",
+          "ai": false
+        },
+        {
+          "code": "ga",
+          "name": "爱尔兰语",
+          "enName": "Irish",
+          "ai": false
+        },
+        {
+          "code": "am",
+          "name": "阿姆哈拉语",
+          "enName": "Amharic",
+          "ai": false
+        },
+        {
+          "code": "as",
+          "name": "阿萨姆语",
+          "enName": "Assamese",
+          "ai": false
+        },
+        {
+          "code": "or",
+          "name": "奥里亚语",
+          "enName": "Odia",
+          "ai": false
+        }
+      ]
+    },
+    {
+      "letter": "B",
+      "languages": [
+        {
+          "code": "pl",
+          "name": "波兰语",
+          "enName": "Polish",
+          "ai": true
+        },
+        {
+          "code": "bul",
+          "name": "保加利亚语",
+          "enName": "Bulgarian",
+          "ai": true
+        },
+        {
+          "code": "fa",
+          "name": "波斯语",
+          "enName": "Persian",
+          "ai": false
+        },
+        {
+          "code": "be",
+          "name": "白俄罗斯语",
+          "enName": "Belarusian",
+          "ai": false
+        },
+        {
+          "code": "bs",
+          "name": "波斯尼亚语",
+          "enName": "Bosnian",
+          "ai": true
+        },
+        {
+          "code": "eu",
+          "name": "巴斯克语",
+          "enName": "Basque",
+          "ai": false
+        },
+        {
+          "code": "is",
+          "name": "冰岛语",
+          "enName": "Icelandic",
+          "ai": true
+        }
+      ]
+    },
+    {
+      "letter": "D",
+      "languages": [
+        {
+          "code": "de",
+          "name": "德语",
+          "enName": "German",
+          "ai": true
+        },
+        {
+          "code": "dan",
+          "name": "丹麦语",
+          "enName": "Danish",
+          "ai": true
+        }
+      ]
+    },
+    {
+      "letter": "E",
+      "languages": [
+        {
+          "code": "ru",
+          "name": "俄语",
+          "enName": "Russian",
+          "ai": true
+        }
+      ]
+    },
+    {
+      "letter": "F",
+      "languages": [
+        {
+          "code": "fra",
+          "name": "法语",
+          "enName": "French",
+          "ai": true
+        },
+        {
+          "code": "fin",
+          "name": "芬兰语",
+          "enName": "Finnish",
+          "ai": true
+        },
+        {
+          "code": "fil",
+          "name": "菲律宾语",
+          "enName": "Filipino",
+          "ai": true
+        }
+      ]
+    },
+    {
+      "letter": "G",
+      "languages": [
+        {
+          "code": "km",
+          "name": "高棉语",
+          "enName": "Khmer",
+          "ai": true
+        },
+        {
+          "code": "ka",
+          "name": "格鲁吉亚语",
+          "enName": "Georgian",
+          "ai": false
+        },
+        {
+          "code": "gu",
+          "name": "古吉拉特语",
+          "enName": "Gujarati",
+          "ai": false
+        }
+      ]
+    },
+    {
+      "letter": "H",
+      "languages": [
+        {
+          "code": "kor",
+          "name": "韩语",
+          "enName": "Korean",
+          "ai": true
+        },
+        {
+          "code": "nl",
+          "name": "荷兰语",
+          "enName": "Dutch",
+          "ai": true
+        },
+        {
+          "code": "kk",
+          "name": "哈萨克语",
+          "enName": "Kazakh",
+          "ai": false
+        },
+        {
+          "code": "ht",
+          "name": "海地克里奥尔语",
+          "enName": "Haitian Creole",
+          "ai": false
+        },
+        {
+          "code": "ha",
+          "name": "豪萨语",
+          "enName": "Hausa",
+          "ai": false
+        }
+      ]
+    },
+    {
+      "letter": "J",
+      "languages": [
+        {
+          "code": "cs",
+          "name": "捷克语",
+          "enName": "Czech",
+          "ai": false
+        },
+        {
+          "code": "ky",
+          "name": "吉尔吉斯语",
+          "enName": "Kyrgyz",
+          "ai": false
+        }
+      ]
+    },
+    {
+      "letter": "K",
+      "languages": [
+        {
+          "code": "kn",
+          "name": "卡纳达语",
+          "enName": "Kannada",
+          "ai": false
+        },
+        {
+          "code": "ku",
+          "name": "库尔德语",
+          "enName": "Kurdish",
+          "ai": false
+        },
+        {
+          "code": "co",
+          "name": "科西嘉语",
+          "enName": "Corsican",
+          "ai": false
+        },
+        {
+          "code": "xh",
+          "name": "科萨语",
+          "enName": "Xhosa",
+          "ai": false
+        }
+      ]
+    },
+    {
+      "letter": "L",
+      "languages": [
+        {
+          "code": "rom",
+          "name": "罗马尼亚语",
+          "enName": "Romanian",
+          "ai": false
+        },
+        {
+          "code": "lat",
+          "name": "拉丁语",
+          "enName": "Latin",
+          "ai": false
+        },
+        {
+          "code": "lo",
+          "name": "老挝语",
+          "enName": "Lao",
+          "ai": false
+        },
+        {
+          "code": "lt",
+          "name": "立陶宛语",
+          "enName": "Lithuanian",
+          "ai": false
+        },
+        {
+          "code": "lv",
+          "name": "拉脱维亚语",
+          "enName": "Latvian",
+          "ai": false
+        },
+        {
+          "code": "lo",
+          "name": "老挝语",
+          "enName": "Lao",
+          "ai": false
+        },
+        {
+          "code": "lb",
+          "name": "卢森堡语",
+          "enName": "Luxembourgish",
+          "ai": false
+        }
+      ]
+    },
+    {
+      "letter": "M",
+      "languages": [
+        {
+          "code": "may",
+          "name": "马来语",
+          "enName": "Malay",
+          "ai": false
+        },
+        {
+          "code": "mg",
+          "name": "马尔加什语",
+          "enName": "Malagasy",
+          "ai": false
+        },
+        {
+          "code": "mi",
+          "name": "毛利语",
+          "enName": "Maori",
+          "ai": false
+        },
+        {
+          "code": "ml",
+          "name": "马拉雅拉姆语",
+          "enName": "Malayalam",
+          "ai": false
+        },
+        {
+          "code": "mr",
+          "name": "马拉地语",
+          "enName": "Marathi",
+          "ai": false
+        },
+        {
+          "code": "mk",
+          "name": "马其顿语",
+          "enName": "Macedonian",
+          "ai": false
+        },
+        {
+          "code": "ms",
+          "name": "马来语",
+          "enName": "Malay",
+          "ai": false
+        },
+        {
+          "code": "my",
+          "name": "缅甸语",
+          "enName": "Burmese",
+          "ai": false
+        },
+        {
+          "code": "hmn",
+          "name": "苗语",
+          "enName": "Hmong",
+          "ai": false
+        },
+        {
+          "code": "ma",
+          "name": "马其顿语",
+          "enName": "Macedonian",
+          "ai": false
+        },
+        {
+          "code": "mt",
+          "name": "马耳他语",
+          "enName": "Maltese",
+          "ai": false
+        }
+      ]
+    },
+    {
+      "letter": "N",
+      "languages": [
+        {
+          "code": "ne",
+          "name": "尼泊尔语",
+          "enName": "Nepali",
+          "ai": false
+        },
+        {
+          "code": "ny",
+          "name": "尼扬贾语",
+          "enName": "Nyanja",
+          "ai": false
+        }
+      ]
+    },
+    {
+      "letter": "P",
+      "languages": [
+        {
+          "code": "pt",
+          "name": "葡萄牙语",
+          "enName": "Portuguese",
+          "ai": true
+        },
+        {
+          "code": "pa",
+          "name": "旁遮普语",
+          "enName": "Punjabi",
+          "ai": false
+        },
+        {
+          "code": "ps",
+          "name": "普什图语",
+          "enName": "Pashto",
+          "ai": false
+        },
+        {
+          "code": "pt",
+          "name": "葡萄牙语",
+          "enName": "Portuguese",
+          "ai": true
+        }
+      ]
+    },
+    {
+      "letter": "R",
+      "languages": [
+        {
+          "code": "jp",
+          "name": "日语",
+          "enName": "Japanese",
+          "ai": true
+        },
+        {
+          "code": "swe",
+          "name": "瑞典语",
+          "enName": "Swedish",
+          "ai": false
+        }
+      ]
+    },
+    {
+      "letter": "S",
+      "languages": [
+        {
+          "code": "slo",
+          "name": "斯洛文尼亚语",
+          "enName": "Slovenian",
+          "ai": false
+        },
+        {
+          "code": "sk",
+          "name": "斯洛伐克语",
+          "enName": "Slovak",
+          "ai": false
+        },
+        {
+          "code": "sw",
+          "name": "斯瓦希里语",
+          "enName": "Swahili",
+          "ai": false
+        },
+        {
+          "code": "so",
+          "name": "索马里语",
+          "enName": "Somali",
+          "ai": false
+        },
+        {
+          "code": "st",
+          "name": "塞索托语",
+          "enName": "Southern Sotho",
+          "ai": false
+        },
+        {
+          "code": "sm",
+          "name": "萨摩亚语",
+          "enName": "Samoan",
+          "ai": false
+        },
+        {
+          "code": "gd",
+          "name": "苏格兰盖尔语",
+          "enName": "Scottish Gaelic",
+          "ai": false
+        },
+        {
+          "code": "sr",
+          "name": "塞尔维亚语",
+          "enName": "Serbian",
+          "ai": false
+        }
+      ]
+    },
+    {
+      "letter": "T",
+      "languages": [
+        {
+          "code": "th",
+          "name": "泰语",
+          "enName": "Thai",
+          "ai": false
+        },
+        {
+          "code": "tr",
+          "name": "土耳其语",
+          "enName": "Turkish",
+          "ai": false
+        },
+        {
+          "code": "ta",
+          "name": "泰米尔语",
+          "enName": "Tamil",
+          "ai": false
+        },
+        {
+          "code": "te",
+          "name": "泰卢固语",
+          "enName": "Telugu",
+          "ai": false
+        },
+        {
+          "code": "tg",
+          "name": "塔吉克语",
+          "enName": "Tajik",
+          "ai": false
+        },
+        {
+          "code": "tt",
+          "name": "鞑靼语",
+          "enName": "Tatar",
+          "ai": false
+        }
+      ]
+    },
+    {
+      "letter": "W",
+      "languages": [
+        {
+          "code": "uk",
+          "name": "乌克兰语",
+          "enName": "Ukrainian",
+          "ai": false
+        },
+        {
+          "code": "ur",
+          "name": "乌尔都语",
+          "enName": "Urdu",
+          "ai": false
+        },
+        {
+          "code": "cy",
+          "name": "威尔士语",
+          "enName": "Welsh",
+          "ai": false
+        },
+        {
+          "code": "ug",
+          "name": "维吾尔语",
+          "enName": "Uyghur",
+          "ai": false
+        },
+        {
+          "code": "uz",
+          "name": "乌兹别克语",
+          "enName": "Uzbek",
+          "ai": false
+        }
+      ]
+    },
+    {
+      "letter": "X",
+      "languages": [
+        {
+          "code": "spa",
+          "name": "西班牙语",
+          "enName": "Spanish",
+          "ai": true
+        },
+        {
+          "code": "el",
+          "name": "希腊语",
+          "enName": "Greek",
+          "ai": false
+        },
+        {
+          "code": "hu",
+          "name": "匈牙利语",
+          "enName": "Hungarian",
+          "ai": false
+        },
+        {
+          "code": "he",
+          "name": "希伯来语",
+          "enName": "Hebrew",
+          "ai": false
+        },
+        {
+          "code": "sd",
+          "name": "信德语",
+          "enName": "Sindhi",
+          "ai": false
+        },
+        {
+          "code": "iw",
+          "name": "希伯来语",
+          "enName": "Hebrew",
+          "ai": false
+        }
+      ]
+    },
+    {
+      "letter": "Y",
+      "languages": [
+        {
+          "code": "en",
+          "name": "英语",
+          "enName": "English",
+          "ai": true
+        },
+        {
+          "code": "yue",
+          "name": "粤语",
+          "enName": "Cantonese",
+          "ai": true
+        },
+        {
+          "code": "it",
+          "name": "意大利语",
+          "enName": "Italian",
+          "ai": true
+        },
+        {
+          "code": "hi",
+          "name": "印地语",
+          "enName": "Hindi",
+          "ai": false
+        },
+        {
+          "code": "vie",
+          "name": "越南语",
+          "enName": "Vietnamese",
+          "ai": true
+        },
+        {
+          "code": "id",
+          "name": "印尼语",
+          "enName": "Indonesian",
+          "ai": false
+        },
+        {
+          "code": "yi",
+          "name": "意第绪语",
+          "enName": "Yiddish",
+          "ai": false
+        },
+        {
+          "code": "yo",
+          "name": "约鲁巴语",
+          "enName": "Yoruba",
+          "ai": false
+        }
+      ]
+    },
+    {
+      "letter": "Z",
+      "languages": [
+        {
+          "code": "zh",
+          "name": "中文(简体)",
+          "enName": "Chinese (Simplified)",
+          "ai": true
+        },
+        {
+          "code": "jw",
+          "name": "爪哇语",
+          "enName": "Javanese",
+          "ai": false
+        },
+        {
+          "code": "zu",
+          "name": "祖鲁语",
+          "enName": "Zulu",
+          "ai": false
+        },
+        {
+          "code": "jw",
+          "name": "爪哇语",
+          "enName": "Javanese",
+          "ai": false
+        }
+      ]
+    }
+  ]
+}
