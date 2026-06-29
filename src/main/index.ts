@@ -1,8 +1,8 @@
-import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification } from 'electron'
 import { spawn, type ChildProcessWithoutNullStreams } from 'child_process'
 import { existsSync } from 'fs'
 import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { electronApp, is } from '@electron-toolkit/utils'
 import appIcon from '../../resources/icon.png?asset'
 
 const APP_NAME = '鱼语翻译'
@@ -211,13 +211,36 @@ function createWindow(): void {
     mainWindow?.show()
   })
 
+  // 禁用所有打开 DevTools 的快捷键
+  mainWindow.webContents.on('before-input-event', (_event, input) => {
+    if (
+      input.key === 'F12' ||
+      (input.control && input.shift && (input.key === 'I' || input.key === 'i')) ||
+      (input.control && input.shift && (input.key === 'J' || input.key === 'j')) ||
+      (input.control && (input.key === 'U' || input.key === 'u'))
+    ) {
+      _event.preventDefault()
+    }
+  })
+
   // 点击关闭按钮时隐藏到托盘，而不是退出程序
+  let hasNotifiedMinimize = false
   mainWindow.on('close', (event) => {
     if (!isQuitting) {
       event.preventDefault()
       mainWindow?.hide()
       if (process.platform === 'darwin') {
         app.dock?.hide()
+      }
+
+      // 首次最小化时提示用户
+      if (!hasNotifiedMinimize) {
+        hasNotifiedMinimize = true
+        new Notification({
+          title: APP_NAME,
+          body: '程序已最小化到系统托盘，右键托盘图标可退出程序。',
+          icon: getTrayIconImage()
+        }).show()
       }
     }
   })
@@ -304,10 +327,6 @@ app.whenReady().then(() => {
   }
 
   electronApp.setAppUserModelId('com.fishtranslate.app')
-
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
-  })
 
   ipcMain.handle('translate:text', async (_event, text: string, fromLang: string, toLang: string) => {
     const query = text.trim()
