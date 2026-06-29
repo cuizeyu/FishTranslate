@@ -25,6 +25,7 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "antd": "^6.4.5",
+    "koffi": "^3.0.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
@@ -45,7 +46,8 @@
     "onlyBuiltDependencies": [
       "electron",
       "electron-builder",
-      "esbuild"
+      "esbuild",
+      "koffi"
     ]
   }
 }

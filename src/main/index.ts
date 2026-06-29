@@ -1,16 +1,155 @@
-import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification } from 'electron'
+import {
+  app,
+  shell,
+  BrowserWindow,
+  ipcMain,
+  Tray,
+  Menu,
+  nativeImage,
+  Notification,
+  globalShortcut
+} from 'electron'
 import { spawn, type ChildProcessWithoutNullStreams } from 'child_process'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
+import { Worker } from 'worker_threads'
 import { electronApp, is } from '@electron-toolkit/utils'
 import appIcon from '../../resources/icon.png?asset'
 
 const APP_NAME = '鱼语翻译'
 const TRANSLATE_TIMEOUT = 45_000
+const DEFAULT_SCREENSHOT_SHORTCUT = 'CommandOrControl+Shift+D'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let isQuitting = false
+let screenshotShortcut = DEFAULT_SCREENSHOT_SHORTCUT
+
+// 低级键盘钩子 worker（仅 Windows 使用，真正抢占快捷键）
+let hookWorker: Worker | null = null
+let hookReady = false
+
+function getConfigFile(): string {
+  return join(app.getPath('userData'), 'config.json')
+}
+
+function loadConfig(): void {
+  try {
+    const data = JSON.parse(readFileSync(getConfigFile(), 'utf-8'))
+    if (typeof data.screenshotShortcut === 'string' && data.screenshotShortcut) {
+      screenshotShortcut = data.screenshotShortcut
+    }
+  } catch {
+    // 配置文件不存在或解析失败，使用默认值
+  }
+}
+
+function saveConfig(): void {
+  try {
+    writeFileSync(
+      getConfigFile(),
+      JSON.stringify({ screenshotShortcut }, null, 2),
+      'utf-8'
+    )
+  } catch (error) {
+    console.warn('[config] save failed:', error)
+  }
+}
+
+function getHookWorkerPath(): string {
+  return is.dev
+    ? join(getRuntimeRoot(), 'resources', 'hook', 'keyboard-hook.worker.cjs')
+    : join(process.resourcesPath, 'hook', 'keyboard-hook.worker.cjs')
+}
+
+// 用变量名阻止打包器静态分析，保留运行时 require.resolve
+function resolveKoffiPath(): string {
+  const moduleName = 'koffi'
+  return require.resolve(moduleName)
+}
+
+function startHookWorker(): boolean {
+  if (process.platform !== 'win32') return false
+  if (hookWorker) return hookReady
+
+  let worker: Worker
+  try {
+    worker = new Worker(getHookWorkerPath(), {
+      workerData: { koffiPath: resolveKoffiPath(), accelerator: screenshotShortcut }
+    })
+  } catch (error) {
+    console.warn('[hook] 启动 worker 失败:', error)
+    return false
+  }
+
+  hookWorker = worker
+  hookReady = false
+
+  worker.on('message', (msg: { type: string; ok?: boolean; error?: string }) => {
+    if (msg.type === 'ready') {
+      hookReady = !!msg.ok
+      if (msg.ok) {
+        console.log('[hook] 低级键盘钩子已安装，当前快捷键:', screenshotShortcut)
+      } else {
+        console.warn('[hook] 钩子安装失败:', msg.error)
+      }
+    } else if (msg.type === 'trigger') {
+      console.log('[hook] 截图翻译快捷键触发')
+      showMainWindow()
+      mainWindow?.webContents.send('shortcut:screenshot-triggered')
+    }
+  })
+  worker.on('error', (error) => {
+    console.warn('[hook] worker 异常:', error)
+    hookReady = false
+  })
+  worker.on('exit', (code) => {
+    hookReady = false
+    if (!isQuitting) {
+      console.warn('[hook] worker 退出，code =', code)
+    }
+  })
+
+  return true
+}
+
+function stopHookWorker(): void {
+  if (!hookWorker) return
+  hookReady = false
+  hookWorker.terminate().catch(() => {})
+  hookWorker = null
+}
+
+function updateHookAccelerator(accelerator: string): void {
+  hookWorker?.postMessage({ type: 'update', accelerator })
+}
+
+// 非 Windows 平台回退到 globalShortcut（无法抢占，仅先到先得）
+function registerGlobalShortcut(): boolean {
+  globalShortcut.unregisterAll()
+  if (!screenshotShortcut) return true
+  try {
+    return globalShortcut.register(screenshotShortcut, () => {
+      showMainWindow()
+      mainWindow?.webContents.send('shortcut:screenshot-triggered')
+    })
+  } catch (error) {
+    console.warn('[shortcut] 注册异常:', error)
+    return false
+  }
+}
+
+// 注册当前快捷键：Windows 用低级钩子（抢占式），其他平台用 globalShortcut
+function registerScreenshotShortcut(): boolean {
+  if (process.platform === 'win32') {
+    if (!hookWorker) {
+      return startHookWorker()
+    }
+    updateHookAccelerator(screenshotShortcut)
+    return true
+  }
+  return registerGlobalShortcut()
+}
 
 type PythonResponse = {
   id: number
@@ -338,6 +477,20 @@ app.whenReady().then(() => {
     return translatorService.translate(query, fromLang, toLang)
   })
 
+  ipcMain.handle('shortcut:get', () => screenshotShortcut)
+
+  ipcMain.handle('shortcut:set', (_event, accelerator: string) => {
+    screenshotShortcut = accelerator
+    const ok = registerScreenshotShortcut()
+    if (ok) {
+      saveConfig()
+    }
+    return ok
+  })
+
+  loadConfig()
+  registerScreenshotShortcut()
+
   createTray()
   createWindow()
 
@@ -357,6 +510,8 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   isQuitting = true
   translatorService.dispose()
+  stopHookWorker()
+  globalShortcut.unregisterAll()
   tray?.destroy()
   tray = null
 })

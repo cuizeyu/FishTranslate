@@ -3,6 +3,7 @@ import { Button, Tooltip, Dropdown, message } from 'antd'
 import type { MenuProps } from 'antd'
 import { SwapOutlined, DownOutlined, CopyOutlined, HistoryOutlined } from '@ant-design/icons'
 import LanguagePicker from './components/LanguagePicker'
+import ScreenshotTool from './components/ScreenshotTool'
 import { findLanguage, type Language } from './data/languages'
 import { loadHistory, addHistory, type HistoryItem } from './data/history'
 import './App.scss'
@@ -213,6 +214,11 @@ function App() {
           </Tooltip>
         </section>
       </div>
+
+      {/* 底部工具栏 */}
+      <footer className="toolbar">
+        <ScreenshotTool />
+      </footer>
 
       <LanguagePicker
         open={pickerOpen}

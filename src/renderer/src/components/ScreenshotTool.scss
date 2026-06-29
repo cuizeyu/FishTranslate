@@ -1,0 +1,138 @@
+@use '../assets/styles/variables' as v;
+
+.screenshot-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s;
+
+  &:hover {
+    background: #f3f4f6;
+    color: v.$primary;
+  }
+
+  .anticon {
+    font-size: 15px;
+  }
+}
+
+.screenshot-popover {
+  min-width: 220px;
+
+  &__desc {
+    margin: 0 0 12px;
+    color: #4b5563;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__label {
+    flex-shrink: 0;
+    color: #6b7280;
+    font-size: 12px;
+  }
+
+  &__kbd {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    color: #1f2937;
+    font-size: 13px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+  }
+
+  &__set {
+    border: none;
+    background: transparent;
+    color: v.$primary;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.shortcut-recorder {
+  &__current {
+    margin: 0 0 12px;
+    color: #6b7280;
+    font-size: 13px;
+
+    kbd {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      margin-left: 4px;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 5px;
+      color: #1f2937;
+      font-size: 12px;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+  }
+
+  &__hint {
+    margin: 0 0 16px;
+    color: #6b7280;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  &__box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 72px;
+    padding: 16px;
+    border: 2px dashed #d1d5db;
+    border-radius: 10px;
+    background: #fafbfc;
+    color: #9ca3af;
+    font-size: 18px;
+    font-weight: 500;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    transition: all 0.15s;
+
+    &--active {
+      border-color: v.$primary;
+      border-style: solid;
+      color: #1f2937;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(#5b7cfd, 0.12);
+    }
+  }
+
+  &__tip {
+    margin: 12px 0 0;
+    color: #9ca3af;
+    font-size: 12px;
+    text-align: center;
+  }
+}

@@ -5,6 +5,8 @@ declare global {
     electron: ElectronAPI
     api: {
       translate: (text: string, fromLang: string, toLang: string) => Promise<string>
+      getScreenshotShortcut: () => Promise<string>
+      setScreenshotShortcut: (accelerator: string) => Promise<boolean>
     }
   }
 }
