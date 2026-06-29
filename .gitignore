@@ -6,3 +6,5 @@ out
 *.log
 .vite
 build/*.exe
+# 百度 OCR 凭证（含密钥，勿提交）
+resources/python/baidu_ocr_creds.json

@@ -7,7 +7,9 @@ import {
   Menu,
   nativeImage,
   Notification,
-  globalShortcut
+  globalShortcut,
+  desktopCapturer,
+  screen
 } from 'electron'
 import { spawn, type ChildProcessWithoutNullStreams } from 'child_process'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
@@ -18,6 +20,7 @@ import appIcon from '../../resources/icon.png?asset'
 
 const APP_NAME = '鱼语翻译'
 const TRANSLATE_TIMEOUT = 45_000
+const OCR_TIMEOUT = 45_000
 const DEFAULT_SCREENSHOT_SHORTCUT = 'CommandOrControl+Shift+D'
 
 let mainWindow: BrowserWindow | null = null
@@ -95,8 +98,7 @@ function startHookWorker(): boolean {
       }
     } else if (msg.type === 'trigger') {
       console.log('[hook] 截图翻译快捷键触发')
-      showMainWindow()
-      mainWindow?.webContents.send('shortcut:screenshot-triggered')
+      void startScreenshotTranslation()
     }
   })
   worker.on('error', (error) => {
@@ -328,7 +330,117 @@ class PythonTranslatorService {
   }
 }
 
+class OcrService {
+  private child: ChildProcessWithoutNullStreams | null = null
+  private buffer = ''
+  private nextId = 1
+  private pending = new Map<number, PendingRequest>()
+
+  recognize(imageBase64: string, language = 'CHN_ENG'): Promise<string> {
+    const child = this.ensureProcess()
+    const id = this.nextId++
+    const payload = JSON.stringify({ id, image: imageBase64, language }) + '\n'
+
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(id)
+        reject(new Error('OCR 识别超时，请稍后重试'))
+      }, OCR_TIMEOUT)
+
+      this.pending.set(id, { resolve, reject, timer })
+      child.stdin.write(payload, 'utf8', (error) => {
+        if (!error) return
+        clearTimeout(timer)
+        this.pending.delete(id)
+        reject(error)
+      })
+    })
+  }
+
+  dispose(): void {
+    this.child?.kill()
+    this.child = null
+    this.rejectAll(new Error('OCR 服务已关闭'))
+  }
+
+  private ensureProcess(): ChildProcessWithoutNullStreams {
+    if (this.child && !this.child.killed) {
+      return this.child
+    }
+
+    const scriptPath = is.dev
+      ? join(getRuntimeRoot(), 'resources', 'python', 'baidu_ocr.py')
+      : join(getRuntimeRoot(), 'python', 'baidu_ocr.py')
+    const { command, argsPrefix } = getPythonCommand()
+    const child = spawn(command, [...argsPrefix, scriptPath, '--serve'], {
+      env: {
+        ...process.env,
+        PYTHONIOENCODING: 'utf-8',
+        PYTHONUTF8: '1'
+      },
+      windowsHide: true
+    })
+
+    child.stdout.setEncoding('utf8')
+    child.stderr.setEncoding('utf8')
+    child.stdout.on('data', (chunk) => this.handleStdout(chunk))
+    child.stderr.on('data', (chunk) => {
+      console.warn('[ocr]', chunk.trim())
+    })
+    child.on('error', (error) => {
+      this.child = null
+      this.rejectAll(error)
+    })
+    child.on('close', () => {
+      this.child = null
+      this.rejectAll(new Error('OCR 服务已退出，请重试'))
+    })
+
+    this.child = child
+    return child
+  }
+
+  private handleStdout(chunk: string): void {
+    this.buffer += chunk
+    while (true) {
+      const newlineIndex = this.buffer.indexOf('\n')
+      if (newlineIndex === -1) return
+      const line = this.buffer.slice(0, newlineIndex).trim()
+      this.buffer = this.buffer.slice(newlineIndex + 1)
+      if (line) this.handleResponseLine(line)
+    }
+  }
+
+  private handleResponseLine(line: string): void {
+    let response: PythonResponse
+    try {
+      response = JSON.parse(line)
+    } catch {
+      console.warn('[ocr] invalid response:', line)
+      return
+    }
+    const pending = this.pending.get(response.id)
+    if (!pending) return
+    clearTimeout(pending.timer)
+    this.pending.delete(response.id)
+    if (response.ok) {
+      pending.resolve(response.result ?? '')
+    } else {
+      pending.reject(new Error(response.error || 'OCR 识别失败'))
+    }
+  }
+
+  private rejectAll(error: Error): void {
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timer)
+      pending.reject(error)
+    }
+    this.pending.clear()
+  }
+}
+
 const translatorService = new PythonTranslatorService()
+const ocrService = new OcrService()
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -459,6 +571,311 @@ function createTray(): void {
   tray.on('click', () => showMainWindow())
 }
 
+/* ============ 截图翻译 ============ */
+
+type OverlayData = {
+  imageUrl: string
+  scaleFactor: number
+  thumbnail: Electron.NativeImage
+  display: Electron.Display
+}
+
+type Rect = { x: number; y: number; width: number; height: number }
+
+type ResultData = {
+  ocrText: string
+  translatedText: string
+  fromLang: string
+  toLang: string
+  done: boolean
+}
+
+const overlayWindows: BrowserWindow[] = []
+const overlayDataByWindow = new Map<number, OverlayData>()
+let resultWindow: BrowserWindow | null = null
+let resultData: ResultData | null = null
+let isCapturing = false
+let mainWasVisibleBeforeCapture = false
+
+function getRendererUrl(view: string): string {
+  const base = process.env['ELECTRON_RENDERER_URL'] ?? ''
+  if (!base) return `file://${join(__dirname, '../renderer/index.html')}?w=${view}`
+  const sep = base.endsWith('/') ? '' : '/'
+  return `${base}${sep}?w=${view}`
+}
+
+function closeAllOverlays(): void {
+  for (const w of overlayWindows) {
+    overlayDataByWindow.delete(w.id)
+    w.destroy()
+  }
+  overlayWindows.length = 0
+  isCapturing = false
+
+  // 恢复主窗口之前的可见状态
+  if (mainWindow && !mainWindow.isDestroyed() && mainWasVisibleBeforeCapture) {
+    mainWindow.show()
+    mainWindow.focus()
+  }
+  mainWasVisibleBeforeCapture = false
+}
+
+async function startScreenshotTranslation(): Promise<void> {
+  if (isCapturing) {
+    console.log('[screenshot] 已在捕获中，忽略重复触发')
+    return
+  }
+  isCapturing = true
+  console.log('[screenshot] 开始截图翻译流程')
+
+  // 截图前隐藏主窗口，避免它出现在截图里
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
+    mainWasVisibleBeforeCapture = true
+    mainWindow.hide()
+  }
+
+  const displays = screen.getAllDisplays()
+  console.log('[screenshot] 显示器数量:', displays.length, displays.map((d) => ({ id: d.id, bounds: d.bounds, scale: d.scaleFactor })))
+  if (displays.length === 0) {
+    isCapturing = false
+    return
+  }
+
+  for (const display of displays) {
+    // 按该显示器原生分辨率捕获，避免放大导致图片过大触发 OCR 尺寸限制
+    const nativeWidth = Math.round(display.bounds.width * display.scaleFactor)
+    const nativeHeight = Math.round(display.bounds.height * display.scaleFactor)
+
+    let sources: Electron.DesktopCapturerSource[] = []
+    try {
+      sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: { width: nativeWidth, height: nativeHeight },
+        fetchWindowIcons: false
+      })
+    } catch (error) {
+      console.error('[screenshot] desktopCapturer.getSources 失败:', error)
+      continue
+    }
+
+    const source = sources.find((s) => s.display_id === String(display.id)) ?? sources[0]
+    if (!source) continue
+
+    const thumbnail = source.thumbnail
+    if (thumbnail.isEmpty()) {
+      console.warn('[screenshot] 缩略图为空，跳过该显示器:', display.id)
+      continue
+    }
+
+    const overlay = new BrowserWindow({
+      x: display.bounds.x,
+      y: display.bounds.y,
+      width: display.bounds.width,
+      height: display.bounds.height,
+      frame: false,
+      fullscreen: false,
+      movable: false,
+      resizable: false,
+      enableLargerThanScreen: true,
+      hasShadow: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      show: false,
+      backgroundColor: '#000000',
+      webPreferences: {
+        preload: join(__dirname, '../preload/index.js'),
+        sandbox: false
+      }
+    })
+
+    overlayDataByWindow.set(overlay.id, {
+      imageUrl: thumbnail.toDataURL(),
+      scaleFactor: display.scaleFactor,
+      thumbnail,
+      display
+    })
+
+    overlay.on('closed', () => {
+      overlayDataByWindow.delete(overlay.id)
+      const idx = overlayWindows.indexOf(overlay)
+      if (idx >= 0) overlayWindows.splice(idx, 1)
+    })
+
+    overlayWindows.push(overlay)
+    console.log('[screenshot] 创建覆盖窗口:', overlay.id, 'display:', display.id, 'bounds:', display.bounds)
+
+    if (process.env['ELECTRON_RENDERER_URL']) {
+      overlay.loadURL(getRendererUrl('overlay'))
+    } else {
+      overlay.loadFile(join(__dirname, '../renderer/index.html'), { query: { w: 'overlay' } })
+    }
+
+    overlay.once('ready-to-show', () => {
+      console.log('[screenshot] 覆盖窗口 ready-to-show:', overlay.id)
+      overlay.show()
+      overlay.focus()
+      overlay.setAlwaysOnTop(true, 'screen-saver')
+    })
+    overlay.webContents.on('did-fail-load', (_e, code, desc, url) => {
+      console.error('[screenshot] 覆盖窗口加载失败:', overlay.id, code, desc, url)
+    })
+  }
+
+  if (overlayWindows.length === 0) {
+    isCapturing = false
+    if (mainWasVisibleBeforeCapture && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show()
+    }
+    mainWasVisibleBeforeCapture = false
+  }
+}
+
+function cropAndOcr(windowId: number, cssRect: Rect): void {
+  const data = overlayDataByWindow.get(windowId)
+  if (!data) {
+    closeAllOverlays()
+    return
+  }
+
+  const { thumbnail, display } = data
+  const thumbSize = thumbnail.getSize()
+  // 用缩略图像素尺寸 / 显示器逻辑尺寸 得到缩放比，避免依赖 scaleFactor 的精度
+  const scaleX = thumbSize.width / display.bounds.width
+  const scaleY = thumbSize.height / display.bounds.height
+
+  const cropRect = {
+    x: Math.round(cssRect.x * scaleX),
+    y: Math.round(cssRect.y * scaleY),
+    width: Math.round(cssRect.width * scaleX),
+    height: Math.round(cssRect.height * scaleY)
+  }
+
+  // 关闭覆盖窗口，结束捕获态
+  closeAllOverlays()
+
+  let cropped = thumbnail.crop(cropRect)
+  // 百度通用文字识别限制长边 ≤ 4096px，超出则等比缩小
+  const croppedSize = cropped.getSize()
+  const longEdge = Math.max(croppedSize.width, croppedSize.height)
+  if (longEdge > 4096) {
+    const ratio = 4096 / longEdge
+    cropped = cropped.resize({
+      width: Math.round(croppedSize.width * ratio),
+      height: Math.round(croppedSize.height * ratio)
+    })
+  }
+  const pngBuffer = cropped.toPNG()
+  const imageBase64 = pngBuffer.toString('base64')
+
+  // 先展示结果窗口（loading 态），再异步跑 OCR + 翻译
+  resultData = {
+    ocrText: '',
+    translatedText: '',
+    fromLang: 'auto',
+    toLang: 'zh',
+    done: false
+  }
+  showResultWindow()
+
+  void processScreenshot(imageBase64)
+}
+
+async function processScreenshot(imageBase64: string): Promise<void> {
+  try {
+    const ocrText = (await ocrService.recognize(imageBase64, 'CHN_ENG')).trim()
+
+    if (!ocrText) {
+      resultData = {
+        ocrText: '',
+        translatedText: '未识别到文字',
+        fromLang: 'auto',
+        toLang: 'zh',
+        done: true
+      }
+      resultWindow?.webContents.send('screenshot:result-updated')
+      return
+    }
+
+    // 先回显识别结果，再翻译
+    resultData = {
+      ocrText,
+      translatedText: '',
+      fromLang: 'auto',
+      toLang: 'zh',
+      done: false
+    }
+    resultWindow?.webContents.send('screenshot:result-updated')
+
+    try {
+      const translated = await translatorService.translate(ocrText, 'auto', 'zh')
+      resultData = {
+        ocrText,
+        translatedText: translated,
+        fromLang: 'auto',
+        toLang: 'zh',
+        done: true
+      }
+    } catch (translateError) {
+      resultData = {
+        ocrText,
+        translatedText: translateError instanceof Error ? translateError.message : '翻译失败',
+        fromLang: 'auto',
+        toLang: 'zh',
+        done: true
+      }
+    }
+    resultWindow?.webContents.send('screenshot:result-updated')
+  } catch (ocrError) {
+    resultData = {
+      ocrText: '__error__',
+      translatedText: ocrError instanceof Error ? ocrError.message : 'OCR 识别失败',
+      fromLang: 'auto',
+      toLang: 'zh',
+      done: true
+    }
+    resultWindow?.webContents.send('screenshot:result-updated')
+  }
+}
+
+function showResultWindow(): void {
+  if (resultWindow && !resultWindow.isDestroyed()) {
+    resultWindow.show()
+    resultWindow.focus()
+    return
+  }
+
+  const display = screen.getPrimaryDisplay()
+  const width = 480
+  const height = 520
+
+  resultWindow = new BrowserWindow({
+    width,
+    height,
+    minWidth: 360,
+    minHeight: 320,
+    x: display.bounds.x + display.bounds.width - width - 40,
+    y: display.bounds.y + 80,
+    title: '截图翻译结果',
+    autoHideMenuBar: true,
+    icon: getDevWindowIcon(),
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false
+    }
+  })
+
+  resultWindow.on('closed', () => {
+    resultWindow = null
+    resultData = null
+  })
+
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    resultWindow.loadURL(getRendererUrl('result'))
+  } else {
+    resultWindow.loadFile(join(__dirname, '../renderer/index.html'), { query: { w: 'result' } })
+  }
+}
+
 app.whenReady().then(() => {
   app.setName(APP_NAME)
   if (process.platform === 'darwin' && is.dev) {
@@ -488,6 +905,38 @@ app.whenReady().then(() => {
     return ok
   })
 
+  // 截图翻译相关 IPC
+  ipcMain.handle('screenshot:get-overlay-data', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return null
+    const data = overlayDataByWindow.get(win.id)
+    if (!data) return null
+    return { imageUrl: data.imageUrl, scaleFactor: data.scaleFactor }
+  })
+
+  ipcMain.handle('screenshot:select', (event, rect: Rect) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return
+    cropAndOcr(win.id, rect)
+  })
+
+  ipcMain.handle('screenshot:cancel', () => {
+    closeAllOverlays()
+  })
+
+  ipcMain.handle('screenshot:get-result-data', () => {
+    if (!resultData) {
+      return {
+        ocrText: '',
+        translatedText: '',
+        fromLang: 'auto',
+        toLang: 'zh',
+        done: false
+      }
+    }
+    return resultData
+  })
+
   loadConfig()
   registerScreenshotShortcut()
 
@@ -510,6 +959,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   isQuitting = true
   translatorService.dispose()
+  ocrService.dispose()
   stopHookWorker()
   globalShortcut.unregisterAll()
   tray?.destroy()

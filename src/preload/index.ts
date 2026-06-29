@@ -7,7 +7,26 @@ const api = {
     ipcRenderer.invoke('translate:text', text, fromLang, toLang),
   getScreenshotShortcut: (): Promise<string> => ipcRenderer.invoke('shortcut:get'),
   setScreenshotShortcut: (accelerator: string): Promise<boolean> =>
-    ipcRenderer.invoke('shortcut:set', accelerator)
+    ipcRenderer.invoke('shortcut:set', accelerator),
+  screenshot: {
+    getOverlayData: (): Promise<{ imageUrl: string; scaleFactor: number }> =>
+      ipcRenderer.invoke('screenshot:get-overlay-data'),
+    select: (rect: { x: number; y: number; width: number; height: number }): Promise<void> =>
+      ipcRenderer.invoke('screenshot:select', rect),
+    cancel: (): Promise<void> => ipcRenderer.invoke('screenshot:cancel'),
+    getResultData: (): Promise<{
+      ocrText: string
+      translatedText: string
+      fromLang: string
+      toLang: string
+      done: boolean
+    }> => ipcRenderer.invoke('screenshot:get-result-data'),
+    onResultUpdated: (callback: () => void): (() => void) => {
+      const handler = (): void => callback()
+      ipcRenderer.on('screenshot:result-updated', handler)
+      return () => ipcRenderer.removeListener('screenshot:result-updated', handler)
+    }
+  }
 }
 
 if (process.contextIsolated) {

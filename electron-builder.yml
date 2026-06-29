@@ -15,6 +15,10 @@ asarUnpack:
 extraResources:
   - from: resources/python/baidu_translate.py
     to: python/baidu_translate.py
+  - from: resources/python/baidu_ocr.py
+    to: python/baidu_ocr.py
+  - from: resources/python/baidu_ocr_creds.json
+    to: python/baidu_ocr_creds.json
   - from: resources/hook/keyboard-hook.worker.cjs
     to: hook/keyboard-hook.worker.cjs
   - from: .venv
