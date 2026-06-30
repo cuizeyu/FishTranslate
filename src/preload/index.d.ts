@@ -1,5 +1,6 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
+type OverlayData = { imageUrl: string; scaleFactor: number }
 type ResultData = {
   ocrText: string
   translatedText: string

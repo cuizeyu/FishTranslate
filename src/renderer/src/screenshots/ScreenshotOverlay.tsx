@@ -18,6 +18,7 @@ function ScreenshotOverlay() {
   const [start, setStart] = useState<Point | null>(null)
   const [current, setCurrent] = useState<Point | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
 
   useEffect(() => {
     window.api.screenshot.getOverlayData().then((data) => {
@@ -57,6 +58,8 @@ function ScreenshotOverlay() {
     if (!start) return
     const end = toLocalPoint(e)
     const rect = normalizeRect(start, end)
+    const imgEl = imgRef.current
+    const imgRect = imgEl?.getBoundingClientRect()
     setStart(null)
     setCurrent(null)
     // 太小的选区视为点击，取消
@@ -64,13 +67,23 @@ function ScreenshotOverlay() {
       window.api.screenshot.cancel()
       return
     }
-    // 选区基于 CSS 像素，乘以 scaleFactor 还原为图片像素
-    window.api.screenshot.select({
-      x: rect.x * scaleFactor,
-      y: rect.y * scaleFactor,
-      width: rect.width * scaleFactor,
-      height: rect.height * scaleFactor
-    })
+    if (!imgEl || !imgRect || imgRect.width === 0 || imgRect.height === 0) {
+      window.api.screenshot.cancel()
+      return
+    }
+    // 选区相对于 img 显示框的 CSS 坐标，按显示框→原图像素的比例映射到图片像素
+    // 这样无论 Windows 把窗口实际尺寸缩成多少，裁剪都能对上原图
+    const naturalWidth = imgEl.naturalWidth
+    const naturalHeight = imgEl.naturalHeight
+    const relX = rect.x - imgRect.left
+    const relY = rect.y - imgRect.top
+    const cropRect = {
+      x: Math.round((relX / imgRect.width) * naturalWidth),
+      y: Math.round((relY / imgRect.height) * naturalHeight),
+      width: Math.round((rect.width / imgRect.width) * naturalWidth),
+      height: Math.round((rect.height / imgRect.height) * naturalHeight)
+    }
+    window.api.screenshot.select(cropRect)
   }
 
   const selRect = start && current ? normalizeRect(start, current) : null
@@ -83,7 +96,15 @@ function ScreenshotOverlay() {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
-      {imageUrl && <img className="screenshot-overlay__bg" src={imageUrl} alt="" draggable={false} />}
+      {imageUrl && (
+        <img
+          ref={imgRef}
+          className="screenshot-overlay__bg"
+          src={imageUrl}
+          alt=""
+          draggable={false}
+        />
+      )}
       <div className="screenshot-overlay__dim" />
       {selRect && (
         <>
